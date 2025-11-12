@@ -5,6 +5,7 @@ import { fileURLToPath, URL } from 'url';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
+      base: '/', 
       server: {
         port: 3000,
         host: '0.0.0.0',
@@ -16,8 +17,6 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          // FIX: __dirname is not available in ES modules.
-          // Replaced with an ESM-compatible way to get the project root directory.
           '@': fileURLToPath(new URL('.', import.meta.url)),
         }
       }
