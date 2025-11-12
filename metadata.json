@@ -1,0 +1,8 @@
+{
+  "name": "Wasiyatak - Your Will",
+  "description": "A modern application to create, manage, and store personal wills in multiple languages. It provides a guided workflow to register personal details, beneficiaries, assets, debts, and final wishes, with options to export as a PDF and include multimedia messages.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
