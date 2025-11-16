@@ -55,7 +55,7 @@ const initialWill: Will = {
         fullName: '',
         gender: types.Gender.MALE,
         religion: types.Religion.MUSLIM,
-        countryOfResidence: 'United States',
+        countryOfResidence: 'US',
         maritalStatus: types.MaritalStatus.NOT_MARRIED,
         fatherAlive: 'No',
         motherAlive: 'No',

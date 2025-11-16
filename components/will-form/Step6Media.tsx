@@ -48,7 +48,7 @@ const Step6Media: React.FC = () => {
         </div>
         <div className="text-center text-slate-500 my-4">{t('or_link_url')}</div>
         <Input
-          label="URL"
+          label={t('url_label')}
           id="mediaUrl"
           name="url"
           value={mediaMessage.url || ''}

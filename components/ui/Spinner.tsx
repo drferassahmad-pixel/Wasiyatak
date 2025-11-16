@@ -1,6 +1,8 @@
 import React from 'react';
+import { useLocalization } from '../../context/LocalizationContext';
 
 const Spinner: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
+  const { t } = useLocalization();
   const sizeClasses = {
     sm: 'h-5 w-5',
     md: 'h-8 w-8',
@@ -13,7 +15,7 @@ const Spinner: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
       role="status"
     >
       <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
-        Loading...
+        {t('loading_sr')}
       </span>
     </div>
   );

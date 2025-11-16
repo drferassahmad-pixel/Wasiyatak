@@ -39,55 +39,7 @@ export const getConversionRate = async (from: string, to: string): Promise<numbe
     }
 };
 
-export const calculateIslamicInheritance = async (will: types.Will, residuaryEstate: number, language: string): Promise<types.InheritanceResult[]> => {
-    const { personalDetails } = will;
-
-    if (personalDetails.religion !== types.Religion.MUSLIM) {
-        return [];
-    }
-    
-    let deceasedFamilyDetails = `The deceased is a ${personalDetails.gender.toLowerCase()}. The following relatives are alive:\n`;
-
-    // Spouse(s)
-    if (personalDetails.gender === types.Gender.FEMALE) {
-        if (personalDetails.maritalStatus === types.MaritalStatus.MARRIED) {
-            deceasedFamilyDetails += `- One husband\n`;
-        }
-    } else { // MALE
-        const wives = personalDetails.muslimDetails?.wivesCount || 0;
-        if (wives > 0) {
-            deceasedFamilyDetails += `- ${wives} wife(s)\n`;
-        }
-    }
-    
-    // Parents
-    if (personalDetails.fatherAlive === 'Yes') deceasedFamilyDetails += `- Father\n`;
-    if (personalDetails.motherAlive === 'Yes') deceasedFamilyDetails += `- Mother\n`;
-
-    // Grandparents
-    if (personalDetails.paternalGrandfatherAlive === 'Yes') deceasedFamilyDetails += `- Paternal Grandfather (Father's Father)\n`;
-    if (personalDetails.paternalGrandmotherAlive === 'Yes') deceasedFamilyDetails += `- Paternal Grandmother (Father's Mother)\n`;
-    if (personalDetails.maternalGrandmotherAlive === 'Yes') deceasedFamilyDetails += `- Maternal Grandmother (Mother's Mother)\n`;
-
-    // Children
-    if (personalDetails.sonsCount > 0) deceasedFamilyDetails += `- ${personalDetails.sonsCount} son(s)\n`;
-    if (personalDetails.daughtersCount > 0) deceasedFamilyDetails += `- ${personalDetails.daughtersCount} daughter(s)\n`;
-
-    // Grandchildren (from son)
-    if (personalDetails.sonSonsCount > 0) deceasedFamilyDetails += `- ${personalDetails.sonSonsCount} son's son(s)\n`;
-    if (personalDetails.sonDaughtersCount > 0) deceasedFamilyDetails += `- ${personalDetails.sonDaughtersCount} son's daughter(s)\n`;
-
-    // Siblings (only relevant if no father or son)
-    if (personalDetails.fatherAlive === 'No' && personalDetails.sonsCount === 0 && personalDetails.siblings) {
-        const { fullBrothers, fullSisters, paternalBrothers, paternalSisters, maternalSiblings } = personalDetails.siblings;
-        if (fullBrothers > 0) deceasedFamilyDetails += `- ${fullBrothers} full brother(s)\n`;
-        if (fullSisters > 0) deceasedFamilyDetails += `- ${fullSisters} full sister(s)\n`;
-        if (paternalBrothers > 0) deceasedFamilyDetails += `- ${paternalBrothers} paternal brother(s)\n`;
-        if (paternalSisters > 0) deceasedFamilyDetails += `- ${paternalSisters} paternal sister(s)\n`;
-        if (maternalSiblings > 0) deceasedFamilyDetails += `- ${maternalSiblings} maternal sibling(s)\n`;
-    }
-
-
+export const calculateIslamicInheritance = async (deceasedFamilyDetails: string, residuaryEstate: number, language: string): Promise<types.InheritanceResult[]> => {
     const prompt = `Calculate the Islamic inheritance shares based on the Sunni school of thought given the following details.
 Provide the output in the specified JSON format, in the ${language} language.
 

@@ -72,6 +72,9 @@ const ReviewWill: React.FC<ReviewWillProps> = ({ willData, onEdit, onBack }) => 
 
             if (conversionFailed) {
                 setError(t('conversion_failed'));
+                setConvertedTotals({ totalAssets: 0, totalCredits: 0, totalDebits: 0, netEstate: 0, assignedAssets: 0, residuaryEstate: 0 });
+                setIsConvertingCurrency(false);
+                return;
             }
         }
 
@@ -112,8 +115,41 @@ const ReviewWill: React.FC<ReviewWillProps> = ({ willData, onEdit, onBack }) => 
         setError(null);
         setDistribution([]);
         
+        const deceasedGenderString = personalDetails.gender === types.Gender.MALE ? t('inheritance_prompt.deceased_is_male') : t('inheritance_prompt.deceased_is_female');
+        let deceasedFamilyDetails = `${deceasedGenderString} ${t('inheritance_prompt.relatives_intro')}\n`;
+
+        if (personalDetails.gender === types.Gender.FEMALE) {
+            if (personalDetails.maritalStatus === types.MaritalStatus.MARRIED) {
+                deceasedFamilyDetails += `- ${t('inheritance_prompt.husband')}\n`;
+            }
+        } else { // MALE
+            const wives = personalDetails.muslimDetails?.wivesCount || 0;
+            if (wives > 0) {
+                deceasedFamilyDetails += `- ${t('inheritance_prompt.wives', { count: wives })}\n`;
+            }
+        }
+
+        if (personalDetails.fatherAlive === 'Yes') deceasedFamilyDetails += `- ${t('inheritance_prompt.father')}\n`;
+        if (personalDetails.motherAlive === 'Yes') deceasedFamilyDetails += `- ${t('inheritance_prompt.mother')}\n`;
+        if (personalDetails.paternalGrandfatherAlive === 'Yes') deceasedFamilyDetails += `- ${t('inheritance_prompt.paternal_grandfather')}\n`;
+        if (personalDetails.paternalGrandmotherAlive === 'Yes') deceasedFamilyDetails += `- ${t('inheritance_prompt.paternal_grandmother')}\n`;
+        if (personalDetails.maternalGrandmotherAlive === 'Yes') deceasedFamilyDetails += `- ${t('inheritance_prompt.maternal_grandmother')}\n`;
+        if (personalDetails.sonsCount > 0) deceasedFamilyDetails += `- ${t('inheritance_prompt.sons', { count: personalDetails.sonsCount })}\n`;
+        if (personalDetails.daughtersCount > 0) deceasedFamilyDetails += `- ${t('inheritance_prompt.daughters', { count: personalDetails.daughtersCount })}\n`;
+        if (personalDetails.sonSonsCount > 0) deceasedFamilyDetails += `- ${t('inheritance_prompt.son_sons', { count: personalDetails.sonSonsCount })}\n`;
+        if (personalDetails.sonDaughtersCount > 0) deceasedFamilyDetails += `- ${t('inheritance_prompt.son_daughters', { count: personalDetails.sonDaughtersCount })}\n`;
+
+        if (personalDetails.fatherAlive === 'No' && personalDetails.sonsCount === 0 && personalDetails.siblings) {
+            const { fullBrothers, fullSisters, paternalBrothers, paternalSisters, maternalSiblings } = personalDetails.siblings;
+            if (fullBrothers > 0) deceasedFamilyDetails += `- ${t('inheritance_prompt.full_brothers', { count: fullBrothers })}\n`;
+            if (fullSisters > 0) deceasedFamilyDetails += `- ${t('inheritance_prompt.full_sisters', { count: fullSisters })}\n`;
+            if (paternalBrothers > 0) deceasedFamilyDetails += `- ${t('inheritance_prompt.paternal_brothers', { count: paternalBrothers })}\n`;
+            if (paternalSisters > 0) deceasedFamilyDetails += `- ${t('inheritance_prompt.paternal_sisters', { count: paternalSisters })}\n`;
+            if (maternalSiblings > 0) deceasedFamilyDetails += `- ${t('inheritance_prompt.maternal_siblings', { count: maternalSiblings })}\n`;
+        }
+
         try {
-            const result = await calculateIslamicInheritance(willData, convertedTotals.residuaryEstate, languageName);
+            const result = await calculateIslamicInheritance(deceasedFamilyDetails, convertedTotals.residuaryEstate, languageName);
             setDistribution(result);
         } catch (err) {
             console.error("Inheritance calculation failed", err);
@@ -121,7 +157,7 @@ const ReviewWill: React.FC<ReviewWillProps> = ({ willData, onEdit, onBack }) => 
         } finally {
             setIsCalculatingInheritance(false);
         }
-    }, [personalDetails.religion, isConvertingCurrency, convertedTotals.residuaryEstate, willData, languageName, t]);
+    }, [willData, isConvertingCurrency, convertedTotals.residuaryEstate, languageName, t]);
 
     useEffect(() => {
         // Run calculation only after currency conversion is done
@@ -133,12 +169,12 @@ const ReviewWill: React.FC<ReviewWillProps> = ({ willData, onEdit, onBack }) => 
     const handleExportPdf = async () => {
         const input = document.getElementById('will-content-to-export');
         if (!input) return;
-        
+
         setIsExporting(true);
         try {
             const canvas = await html2canvas(input, { scale: 2 });
             const imgData = canvas.toDataURL('image/png');
-            
+
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -159,10 +195,37 @@ const ReviewWill: React.FC<ReviewWillProps> = ({ willData, onEdit, onBack }) => 
                 pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
                 heightLeft -= pdfHeight;
             }
-            pdf.save(`Wasiyatak_Will_${personalDetails.fullName.replace(/\s/g, '_')}.pdf`);
+            
+            // Add a timestamp footer to every page in English
+            const pageCount = pdf.getNumberOfPages();
+            const timestamp = `Exported on: ${new Date().toLocaleString('en-US')}`;
+
+            for (let i = 1; i <= pageCount; i++) {
+                pdf.setPage(i);
+                pdf.setFontSize(8);
+                pdf.setTextColor('#888888');
+                pdf.text(
+                    timestamp,
+                    pdfWidth - 10, // 10mm from the right edge
+                    pdfHeight - 10, // 10mm from the bottom edge
+                    { align: 'right' }
+                );
+            }
+            
+            // Add date to filename for versioning
+            const getFormattedDate = () => {
+                const date = new Date();
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            
+            pdf.save(`Wasiyatak_Will_${personalDetails.fullName.replace(/\s/g, '_')}_${getFormattedDate()}.pdf`);
+            
         } catch (error) {
             console.error("Error exporting PDF:", error);
-            alert("Could not export to PDF.");
+            alert(t('pdf_export_error'));
         } finally {
             setIsExporting(false);
         }
@@ -203,6 +266,17 @@ const ReviewWill: React.FC<ReviewWillProps> = ({ willData, onEdit, onBack }) => 
         </>
     );
 
+    const country = constants.countries.find(c => c.code === personalDetails.countryOfResidence);
+
+    const { siblings } = personalDetails;
+    const hasSiblings = siblings && (
+        siblings.fullBrothers > 0 ||
+        siblings.fullSisters > 0 ||
+        siblings.paternalBrothers > 0 ||
+        siblings.paternalSisters > 0 ||
+        siblings.maternalSiblings > 0
+    );
+
     return (
         <div className="container mx-auto p-4 md:p-8 bg-slate-50">
             <AppHeader
@@ -234,11 +308,12 @@ const ReviewWill: React.FC<ReviewWillProps> = ({ willData, onEdit, onBack }) => 
                         <DataPair label={t('full_name')} value={personalDetails.fullName} />
                         <DataPair label={t('gender')} value={t(`gender_${personalDetails.gender.toLowerCase()}`)} />
                         <DataPair label={t('religion')} value={t(constants.religionOptions.find(r => r.value === personalDetails.religion)?.key || personalDetails.religion)} />
+                        <DataPair label={t('country_of_residence')} value={country ? t(`countries.${country.key}`) : personalDetails.countryOfResidence} />
                         
                         {personalDetails.gender === types.Gender.MALE && personalDetails.religion === types.Religion.MUSLIM ? (
                             <DataPair label={t('number_of_wives')} value={personalDetails.muslimDetails?.wivesCount} />
                         ) : (
-                            <DataPair label={t('marital_status')} value={personalDetails.maritalStatus ? t(`marital_status_${personalDetails.maritalStatus.toLowerCase().replace(/\s/g, '_')}`) : '-'} />
+                            <DataPair label={t('marital_status')} value={personalDetails.maritalStatus ? t(`marital_status_${personalDetails.maritalStatus.toLowerCase().replace(/\s/g, '_')}`) : t('not_specified')} />
                         )}
 
                         <DataPair label={t('father_alive')} value={t(personalDetails.fatherAlive.toLowerCase())} />
@@ -269,6 +344,16 @@ const ReviewWill: React.FC<ReviewWillProps> = ({ willData, onEdit, onBack }) => 
                              <DataPair label={t('residuary_estate')} className="font-bold text-lg text-teal-700" value={formatCurrency(convertedTotals.residuaryEstate)}/>
                         </div>
                     </Section>
+
+                    {hasSiblings && (
+                        <Section title={t('siblings_section')}>
+                            {siblings.fullBrothers > 0 && <DataPair label={t('full_brothers')} value={siblings.fullBrothers} />}
+                            {siblings.fullSisters > 0 && <DataPair label={t('full_sisters')} value={siblings.fullSisters} />}
+                            {siblings.paternalBrothers > 0 && <DataPair label={t('paternal_brothers')} value={siblings.paternalBrothers} />}
+                            {siblings.paternalSisters > 0 && <DataPair label={t('paternal_sisters')} value={siblings.paternalSisters} />}
+                            {siblings.maternalSiblings > 0 && <DataPair label={t('maternal_siblings')} value={siblings.maternalSiblings} />}
+                        </Section>
+                    )}
                 </div>
 
                 {/* Detailed Lists */}
@@ -338,8 +423,8 @@ const ReviewWill: React.FC<ReviewWillProps> = ({ willData, onEdit, onBack }) => 
                 </Section>
                 
                 <Section title={t('final_instructions')}>
-                    <DataPair label={t('burial_location')} value={finalInstructions.burialLocation || '-'} />
-                    <DataPair label={t('final_wishes')} value={finalInstructions.instructions || '-'}/>
+                    <DataPair label={t('burial_location')} value={finalInstructions.burialLocation || t('not_specified')} />
+                    <DataPair label={t('final_wishes')} value={finalInstructions.instructions || t('not_specified')}/>
                 </Section>
 
 

@@ -243,7 +243,7 @@ const Step1PersonalDetails: React.FC = () => {
               {constants.religionOptions.map(o => <option key={o.value} value={o.value}>{t(o.key)}</option>)}
             </Select>
              <Select label={t('country_of_residence')} id="countryOfResidence" name="countryOfResidence" value={personalDetails.countryOfResidence} onChange={handleChange}>
-              {constants.countries.map(c => <option key={c.code} value={c.name}>{t(`countries.${c.key}`)}</option>)}
+              {constants.countries.map(c => <option key={c.code} value={c.code}>{t(`countries.${c.key}`)}</option>)}
             </Select>
         </div>
 
