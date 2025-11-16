@@ -2,13 +2,26 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Translations } from "../lib/translations";
 import * as types from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+// Lazily initialize the AI client to prevent app crash on startup if API key is missing.
+let ai: GoogleGenAI | null = null;
+
+function getAiClient(): GoogleGenAI {
+    if (!process.env.API_KEY) {
+        // This should be caught by the UI, but as a safeguard, we throw.
+        throw new Error("API Key not found. Please set it in your environment.");
+    }
+    if (!ai) {
+        ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    }
+    return ai;
+}
 
 export const getConversionRate = async (from: string, to: string): Promise<number | null> => {
     if (from === to) return 1;
     const prompt = `What is the numerical exchange rate from ${from} to ${to}? Provide the answer in JSON.`;
     try {
-        const response = await ai.models.generateContent({
+        const genAI = getAiClient();
+        const response = await genAI.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
@@ -27,7 +40,7 @@ export const getConversionRate = async (from: string, to: string): Promise<numbe
         });
 
         const text = response.text;
-        const result = JSON.parse(text);
+        const result = JSON.parse(text.trim());
         if (result && typeof result.rate === 'number') {
             return result.rate;
         }
@@ -59,7 +72,8 @@ Instructions:
 `;
 
     try {
-        const response = await ai.models.generateContent({
+        const genAI = getAiClient();
+        const response = await genAI.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
@@ -82,7 +96,7 @@ Instructions:
         });
         
         const text = response.text;
-        const result = JSON.parse(text);
+        const result = JSON.parse(text.trim());
         return result;
 
     } catch (error) {
