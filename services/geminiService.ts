@@ -1,27 +1,25 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { Translations } from "../lib/translations";
 import * as types from "../types";
 
-// Lazily initialize the AI client to prevent app crash on startup if API key is missing.
-let ai: GoogleGenAI | null = null;
-
-function getAiClient(): GoogleGenAI {
+// Helper function to dynamically import and initialize the Gemini client,
+// ensuring the @google/genai module is not loaded on initial app startup.
+async function getInitializedGemini() {
     if (!process.env.API_KEY) {
         // This should be caught by the UI, but as a safeguard, we throw.
         throw new Error("API Key not found. Please set it in your environment.");
     }
-    if (!ai) {
-        ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    }
-    return ai;
+    // Dynamically import the module only when needed
+    const { GoogleGenAI, Type } = await import("@google/genai");
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    return { ai, Type };
 }
 
 export const getConversionRate = async (from: string, to: string): Promise<number | null> => {
     if (from === to) return 1;
     const prompt = `What is the numerical exchange rate from ${from} to ${to}? Provide the answer in JSON.`;
     try {
-        const genAI = getAiClient();
-        const response = await genAI.models.generateContent({
+        const { ai, Type } = await getInitializedGemini(); // Await the client here
+        const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
@@ -72,8 +70,8 @@ Instructions:
 `;
 
     try {
-        const genAI = getAiClient();
-        const response = await genAI.models.generateContent({
+        const { ai, Type } = await getInitializedGemini(); // Await the client here
+        const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
